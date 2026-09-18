@@ -47,6 +47,18 @@
     text-align: center;
   }
 
+  .app-title:focus,
+  .app-footer:focus {
+    outline: none;
+  }
+
+  .app-footer {
+    margin: 4px 0 0;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
   .board {
     flex: 1;
     display: grid;
@@ -149,10 +161,20 @@
     font-size: 0.8rem;
   }
 
+  @media (max-width: 640px) {
+    .sound-control {
+      position: static;
+      align-self: stretch;
+      justify-content: center;
+      flex-wrap: wrap;
+      border-radius: 12px;
+    }
+  }
+
   .list-box {
     flex: 1;
     width: 100%;
-    min-height: 220px;
+    min-height: 500px;
     overflow-y: auto;
     border: 1px solid var(--color-border);
     border-radius: 8px;
@@ -305,15 +327,15 @@
 </style>
 </head>
 <body>
-<div class="sound-control">
-  <label for="volumeSlider">音效</label>
-  <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5">
-  <input type="checkbox" id="soundEnabledCheckbox" checked title="開啟/關閉音效">
-  <button type="button" id="testSoundBtn">測試</button>
-</div>
-
 <div class="app">
-  <h1 class="app-title">抽獎系統</h1>
+  <h1 class="app-title" id="appTitle" tabindex="-1">抽獎系統</h1>
+
+  <div class="sound-control">
+    <label for="volumeSlider">音效</label>
+    <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5">
+    <input type="checkbox" id="soundEnabledCheckbox" checked title="開啟/關閉音效">
+    <button type="button" id="testSoundBtn">測試</button>
+  </div>
 
   <div class="board">
     <section class="panel" id="itemPanel">
@@ -355,6 +377,8 @@
       </div>
     </section>
   </div>
+
+  <footer class="app-footer" id="authorFooter" tabindex="-1">作者: light0986</footer>
 </div>
 
 <script>
@@ -371,6 +395,8 @@
   const volumeSlider = document.getElementById('volumeSlider');
   const soundEnabledCheckbox = document.getElementById('soundEnabledCheckbox');
   const testSoundBtn = document.getElementById('testSoundBtn');
+  const appTitleEl = document.getElementById('appTitle');
+  const authorFooterEl = document.getElementById('authorFooter');
 
   let audioCtx = null;
   let masterGain = null;
@@ -691,7 +717,15 @@
     items.forEach(el => el.classList.remove('spinning'));
     const el = items[index];
     el.classList.add('spinning');
-    el.scrollIntoView({ block: 'nearest' });
+
+    const elTop = el.offsetTop;
+    const elBottom = elTop + el.offsetHeight;
+    if (elTop < itemListEl.scrollTop) {
+      itemListEl.scrollTop = elTop;
+    } else if (elBottom > itemListEl.scrollTop + itemListEl.clientHeight) {
+      itemListEl.scrollTop = elBottom - itemListEl.clientHeight;
+    }
+
     playBeep();
   }
 
@@ -759,8 +793,22 @@
     addWinnerEntry(winnerName, { bold: false });
     playWinSound();
 
+    if (isStackedLayout()) {
+      focusForScroll(authorFooterEl);
+    }
+
     isDrawing = false;
     setControlsDisabled(false);
+  }
+
+  function isStackedLayout() {
+    return window.matchMedia('(max-width: 640px)').matches;
+  }
+
+  function focusForScroll(el) {
+    requestAnimationFrame(() => {
+      el.focus({ preventScroll: false });
+    });
   }
 
   function drawWinner() {
@@ -780,6 +828,10 @@
 
     isDrawing = true;
     setControlsDisabled(true);
+
+    if (isStackedLayout()) {
+      focusForScroll(appTitleEl);
+    }
 
     const targetIndex = Math.floor(Math.random() * items.length);
     spinTo(items, targetIndex, () => {
