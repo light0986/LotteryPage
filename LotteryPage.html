@@ -1,0 +1,806 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抽獎系統</title>
+<style>
+  :root {
+    --color-bg: #f2f4f7;
+    --color-panel: #ffffff;
+    --color-border: #d9dde3;
+    --color-text: #1f2430;
+    --color-muted: #6b7280;
+    --color-primary: #2f6fed;
+    --color-primary-hover: #2559c9;
+    --color-danger: #e5484d;
+    --color-danger-hover: #c93f43;
+    --color-spin: #e5484d;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-width: 300px;
+    overflow-x: hidden;
+    height: 100%;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+  }
+
+  .app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .app-title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .board {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    min-height: 0;
+  }
+
+  @media (max-width: 640px) {
+    .board {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 12px;
+    min-width: 0;
+    min-height: 260px;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .panel-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .checkbox-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--color-text);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .checkbox-field input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+
+  .sound-control {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 6px 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
+  .sound-control input[type="range"] {
+    width: 90px;
+    cursor: pointer;
+  }
+
+  .sound-control input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+
+  .sound-control input:disabled {
+    cursor: not-allowed;
+  }
+
+  .sound-control button {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+  }
+
+  .list-box {
+    flex: 1;
+    width: 100%;
+    min-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: #fbfbfc;
+    padding: 4px;
+    position: relative;
+  }
+
+  .list-box.disabled {
+    pointer-events: none;
+    opacity: 0.85;
+  }
+
+  .empty-hint {
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 24px 8px;
+  }
+
+  .list-item {
+    padding: 6px 10px;
+    margin-bottom: 1px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    font-size: 0.95rem;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .list-item.block-start {
+    margin-top: 10px;
+  }
+
+  .list-item.selectable {
+    cursor: pointer;
+  }
+
+  .list-item.selectable:hover {
+    background: #eef1f6;
+  }
+
+  .list-item.selectable.selected {
+    background: #dbe6ff;
+  }
+
+  .list-item.spinning {
+    border-color: var(--color-spin);
+    background: #fff2f2;
+  }
+
+  .list-item.bold-entry .winner-text {
+    font-weight: 700;
+  }
+
+  .list-item.winner-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .winner-text {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .delete-winner-btn {
+    flex-shrink: 0;
+    width: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 6px;
+    background: var(--color-danger);
+    color: #fff;
+    font-size: 0.85rem;
+    overflow: hidden;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: width 0.25s ease, padding 0.25s ease;
+  }
+
+  .delete-winner-btn:hover {
+    background: var(--color-danger-hover);
+  }
+
+  .delete-winner-btn.expanded {
+    width: 56px;
+    padding: 6px 8px;
+  }
+
+  .panel-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  .panel-footer label {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    white-space: nowrap;
+  }
+
+  .panel-footer input[type="text"] {
+    flex: 1;
+    min-width: 80px;
+    padding: 8px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+    background: #e9ecf1;
+    color: var(--color-text);
+    transition: background-color 0.15s ease;
+  }
+
+  button:hover { background: #dde1e8; }
+  button:active { transform: translateY(1px); }
+
+  button:disabled,
+  input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  button.btn-primary { background: var(--color-primary); color: #fff; }
+  button.btn-primary:hover { background: var(--color-primary-hover); }
+
+  button.btn-danger { background: var(--color-danger); color: #fff; }
+  button.btn-danger:hover { background: var(--color-danger-hover); }
+
+  button.btn-draw {
+    background: var(--color-primary);
+    color: #fff;
+    font-weight: 600;
+  }
+  button.btn-draw:hover { background: var(--color-primary-hover); }
+</style>
+</head>
+<body>
+<div class="sound-control">
+  <label for="volumeSlider">音效</label>
+  <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5">
+  <input type="checkbox" id="soundEnabledCheckbox" checked title="開啟/關閉音效">
+  <button type="button" id="testSoundBtn">測試</button>
+</div>
+
+<div class="app">
+  <h1 class="app-title">抽獎系統</h1>
+
+  <div class="board">
+    <section class="panel" id="itemPanel">
+      <div class="panel-header">
+        <h2>抽獎項目</h2>
+        <div class="toolbar">
+          <button type="button" id="deleteItemBtn">刪除點選項目</button>
+          <button type="button" id="clearItemBtn" class="btn-danger">清空全部</button>
+        </div>
+      </div>
+
+      <div id="itemList" class="list-box"></div>
+
+      <div class="panel-footer">
+        <label for="newItemInput">新增項目</label>
+        <input type="text" id="newItemInput" placeholder="請輸入抽獎項目名稱">
+        <button type="button" id="addItemBtn" class="btn-primary">新增</button>
+        <button type="button" id="shuffleItemsBtn" class="btn-danger">項目打亂</button>
+      </div>
+    </section>
+
+    <section class="panel" id="winnerPanel">
+      <div class="panel-header">
+        <h2>中獎名單</h2>
+        <div class="toolbar">
+          <label class="checkbox-field">
+            <input type="checkbox" id="removeOnWinCheckbox" checked>
+            刪除中獎項目
+          </label>
+        </div>
+      </div>
+
+      <div id="winnerList" class="list-box"></div>
+
+      <div class="panel-footer">
+        <label for="prizeContentInput">中獎內容</label>
+        <input type="text" id="prizeContentInput" value="中獎">
+        <button type="button" id="drawBtn" class="btn-draw">開始抽獎</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  const itemListEl = document.getElementById('itemList');
+  const winnerListEl = document.getElementById('winnerList');
+  const newItemInput = document.getElementById('newItemInput');
+  const prizeContentInput = document.getElementById('prizeContentInput');
+  const addItemBtn = document.getElementById('addItemBtn');
+  const shuffleItemsBtn = document.getElementById('shuffleItemsBtn');
+  const deleteItemBtn = document.getElementById('deleteItemBtn');
+  const clearItemBtn = document.getElementById('clearItemBtn');
+  const drawBtn = document.getElementById('drawBtn');
+  const removeOnWinCheckbox = document.getElementById('removeOnWinCheckbox');
+  const volumeSlider = document.getElementById('volumeSlider');
+  const soundEnabledCheckbox = document.getElementById('soundEnabledCheckbox');
+  const testSoundBtn = document.getElementById('testSoundBtn');
+
+  let audioCtx = null;
+  let masterGain = null;
+
+  function ensureAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = parseFloat(volumeSlider.value);
+      masterGain.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  volumeSlider.addEventListener('input', () => {
+    if (masterGain) masterGain.gain.value = parseFloat(volumeSlider.value);
+  });
+
+  function playBeep() {
+    if (!soundEnabledCheckbox.checked) return;
+    const ctx = ensureAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 700;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(1, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.09);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.1);
+  }
+
+  function playHornNote(startTime, frequency, duration) {
+    const ctx = audioCtx;
+    const osc = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc2.type = 'sawtooth';
+    osc.frequency.setValueAtTime(frequency * 0.85, startTime);
+    osc.frequency.linearRampToValueAtTime(frequency, startTime + 0.05);
+    osc2.frequency.setValueAtTime(frequency * 2 * 0.85, startTime);
+    osc2.frequency.linearRampToValueAtTime(frequency * 2, startTime + 0.05);
+
+    filter.type = 'lowpass';
+    filter.frequency.value = 2600;
+    filter.Q.value = 1;
+
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(1, startTime + 0.04);
+    gain.gain.setValueAtTime(1, startTime + duration - 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+    osc.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.02);
+    osc2.start(startTime);
+    osc2.stop(startTime + duration + 0.02);
+  }
+
+  function playWinSound() {
+    if (!soundEnabledCheckbox.checked) return;
+    const ctx = ensureAudioContext();
+    const now = ctx.currentTime;
+    playHornNote(now, 523, 0.18);
+    playHornNote(now + 0.2, 523, 0.18);
+    playHornNote(now + 0.3, 698, 0.7);
+  }
+
+  let isDrawing = false;
+  let lastPrizeText = null;
+  let expandedWinnerItem = null;
+
+  function updateEmptyState(listEl, message) {
+    const hasItems = listEl.querySelector('.list-item') !== null;
+    let hint = listEl.querySelector('.empty-hint');
+    if (hasItems) {
+      if (hint) hint.remove();
+      return;
+    }
+    if (!hint) {
+      hint = document.createElement('div');
+      hint.className = 'empty-hint';
+      hint.textContent = message;
+      listEl.appendChild(hint);
+    }
+  }
+
+  function createListItem(text, { selectable = false, bold = false, blockStart = false } = {}) {
+    const el = document.createElement('div');
+    el.className = 'list-item'
+      + (selectable ? ' selectable' : '')
+      + (bold ? ' bold-entry' : '')
+      + (blockStart ? ' block-start' : '');
+    el.textContent = text;
+    if (selectable) {
+      el.tabIndex = 0;
+      el.addEventListener('click', () => el.classList.toggle('selected'));
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          el.classList.toggle('selected');
+        }
+      });
+    }
+    return el;
+  }
+
+  function addItem() {
+    const name = newItemInput.value.trim();
+    if (!name) {
+      newItemInput.focus();
+      return;
+    }
+    itemListEl.appendChild(createListItem(name, { selectable: true }));
+    newItemInput.value = '';
+    newItemInput.focus();
+    updateEmptyState(itemListEl, '尚無項目');
+  }
+
+  function deleteSelectedItems() {
+    const selected = itemListEl.querySelectorAll('.list-item.selected');
+    if (selected.length === 0) return;
+    const names = Array.from(selected).map(el => el.textContent).join('、');
+    if (confirm(`確認刪除${names}?`)) {
+      selected.forEach(el => el.remove());
+      updateEmptyState(itemListEl, '尚無項目');
+    }
+  }
+
+  function clearAllItems() {
+    const items = itemListEl.querySelectorAll('.list-item');
+    if (items.length === 0) return;
+    if (confirm('確認是否清空項目?')) {
+      itemListEl.innerHTML = '';
+      updateEmptyState(itemListEl, '尚無項目');
+    }
+  }
+
+  function shuffleItems() {
+    const items = Array.from(itemListEl.querySelectorAll('.list-item'));
+    if (items.length < 2) {
+      alert('請添加至少兩個項目');
+      return;
+    }
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    items.forEach(el => itemListEl.appendChild(el));
+  }
+
+  function createWinnerItem(text, { bold = false, blockStart = false } = {}) {
+    const el = document.createElement('div');
+    el.className = 'list-item winner-item'
+      + (bold ? ' bold-entry' : '')
+      + (blockStart ? ' block-start' : '');
+    el.dataset.name = text;
+
+    const span = document.createElement('span');
+    span.className = 'winner-text';
+    span.textContent = text;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'delete-winner-btn';
+    btn.textContent = '刪除';
+
+    el.appendChild(span);
+    el.appendChild(btn);
+    return el;
+  }
+
+  function findBlockHeader(item) {
+    let sibling = item.previousElementSibling;
+    while (sibling) {
+      if (sibling.classList.contains('bold-entry')) return sibling;
+      sibling = sibling.previousElementSibling;
+    }
+    return null;
+  }
+
+  function blockHasMembers(header) {
+    let sibling = header.nextElementSibling;
+    while (sibling && !sibling.classList.contains('bold-entry')) {
+      if (sibling.classList.contains('winner-item')) return true;
+      sibling = sibling.nextElementSibling;
+    }
+    return false;
+  }
+
+  function getBlockMembers(header) {
+    const members = [];
+    let sibling = header.nextElementSibling;
+    while (sibling && !sibling.classList.contains('bold-entry')) {
+      if (sibling.classList.contains('winner-item')) members.push(sibling);
+      sibling = sibling.nextElementSibling;
+    }
+    return members;
+  }
+
+  function recalcLastPrizeText() {
+    const headers = winnerListEl.querySelectorAll('.winner-item.bold-entry');
+    if (headers.length === 0) {
+      lastPrizeText = null;
+      return;
+    }
+    const last = headers[headers.length - 1];
+    lastPrizeText = last.dataset.name.replace(/:$/, '');
+  }
+
+  function expandWinnerItem(item) {
+    const btn = item.querySelector('.delete-winner-btn');
+    if (btn) btn.classList.add('expanded');
+  }
+
+  function collapseWinnerItem(item) {
+    const btn = item.querySelector('.delete-winner-btn');
+    if (btn) btn.classList.remove('expanded');
+  }
+
+  function addWinnerEntry(text, { bold = false, blockStart = false } = {}) {
+    const hasExisting = winnerListEl.querySelector('.list-item') !== null;
+    winnerListEl.appendChild(createWinnerItem(text, { bold, blockStart: blockStart && hasExisting }));
+    winnerListEl.scrollTop = winnerListEl.scrollHeight;
+    updateEmptyState(winnerListEl, '尚無中獎紀錄');
+  }
+
+  winnerListEl.addEventListener('click', e => {
+    const deleteBtn = e.target.closest('.delete-winner-btn');
+    if (deleteBtn) {
+      const item = deleteBtn.closest('.winner-item');
+      const isHeader = item.classList.contains('bold-entry');
+
+      if (isHeader) {
+        if (confirm('是否刪除整個區塊?')) {
+          getBlockMembers(item).forEach(el => {
+            if (expandedWinnerItem === el) expandedWinnerItem = null;
+            el.remove();
+          });
+          if (expandedWinnerItem === item) expandedWinnerItem = null;
+          item.remove();
+
+          recalcLastPrizeText();
+          updateEmptyState(winnerListEl, '尚無中獎紀錄');
+        }
+        return;
+      }
+
+      const name = item.dataset.name;
+      if (confirm(`是否刪除${name}?`)) {
+        const header = findBlockHeader(item);
+
+        if (expandedWinnerItem === item) expandedWinnerItem = null;
+        item.remove();
+
+        if (header && !blockHasMembers(header)) {
+          if (expandedWinnerItem === header) expandedWinnerItem = null;
+          header.remove();
+        }
+
+        recalcLastPrizeText();
+        updateEmptyState(winnerListEl, '尚無中獎紀錄');
+      }
+      return;
+    }
+
+    const item = e.target.closest('.winner-item');
+    if (!item) return;
+
+    if (expandedWinnerItem && expandedWinnerItem !== item) {
+      collapseWinnerItem(expandedWinnerItem);
+    }
+
+    if (expandedWinnerItem === item) {
+      collapseWinnerItem(item);
+      expandedWinnerItem = null;
+    } else {
+      expandWinnerItem(item);
+      expandedWinnerItem = item;
+    }
+  });
+
+  document.addEventListener('click', e => {
+    if (!expandedWinnerItem) return;
+    if (winnerListEl.contains(e.target)) return;
+    collapseWinnerItem(expandedWinnerItem);
+    expandedWinnerItem = null;
+  });
+
+  function setControlsDisabled(disabled) {
+    addItemBtn.disabled = disabled;
+    shuffleItemsBtn.disabled = disabled;
+    deleteItemBtn.disabled = disabled;
+    clearItemBtn.disabled = disabled;
+    drawBtn.disabled = disabled;
+    newItemInput.disabled = disabled;
+    prizeContentInput.disabled = disabled;
+    removeOnWinCheckbox.disabled = disabled;
+    volumeSlider.disabled = disabled;
+    soundEnabledCheckbox.disabled = disabled;
+    testSoundBtn.disabled = disabled;
+    itemListEl.classList.toggle('disabled', disabled);
+    winnerListEl.classList.toggle('disabled', disabled);
+  }
+
+  function highlightSpinItem(items, index) {
+    items.forEach(el => el.classList.remove('spinning'));
+    const el = items[index];
+    el.classList.add('spinning');
+    el.scrollIntoView({ block: 'nearest' });
+    playBeep();
+  }
+
+  function spinTo(items, targetIndex, onDone) {
+    const total = items.length;
+    const fixedStepDelay = 100;
+    const fixedStepCount = 20;
+    const fixedDuration = fixedStepCount * fixedStepDelay;
+    const decelDuration = 3000;
+    const minDecelSteps = 3;
+    const minLoops = 3;
+
+    let totalSteps = minLoops * total + targetIndex;
+    while (totalSteps < fixedStepCount + minDecelSteps) {
+      totalSteps += total;
+    }
+    const decelStepCount = totalSteps - fixedStepCount;
+
+    let decelIncrement = (2 * (decelDuration - decelStepCount * fixedStepDelay)) / (decelStepCount * (decelStepCount - 1));
+    if (decelIncrement < 0) decelIncrement = 0;
+
+    const delays = [];
+    for (let i = 0; i < fixedStepCount; i++) {
+      delays.push(fixedStepDelay);
+    }
+    for (let i = 0; i < decelStepCount; i++) {
+      delays.push(fixedStepDelay + decelIncrement * i);
+    }
+
+    let currentIndex = 0;
+    highlightSpinItem(items, currentIndex);
+
+    let step = 0;
+    function tick() {
+      if (step >= delays.length) {
+        onDone();
+        return;
+      }
+      const wait = delays[step];
+      step++;
+      setTimeout(() => {
+        currentIndex = (currentIndex + 1) % total;
+        highlightSpinItem(items, currentIndex);
+        tick();
+      }, wait);
+    }
+    tick();
+  }
+
+  function finishDraw(items, targetIndex, prizeText) {
+    const winnerEl = items[targetIndex];
+    const winnerName = winnerEl.textContent;
+
+    if (prizeText !== lastPrizeText) {
+      addWinnerEntry(`${prizeText}:`, { bold: true, blockStart: true });
+      lastPrizeText = prizeText;
+    }
+
+    if (removeOnWinCheckbox.checked) {
+      winnerEl.remove();
+      updateEmptyState(itemListEl, '尚無項目');
+    } else {
+      winnerEl.classList.remove('spinning');
+    }
+    addWinnerEntry(winnerName, { bold: false });
+    playWinSound();
+
+    isDrawing = false;
+    setControlsDisabled(false);
+  }
+
+  function drawWinner() {
+    if (isDrawing) return;
+
+    const items = Array.from(itemListEl.querySelectorAll('.list-item'));
+    if (items.length < 2) {
+      alert('請添加至少兩個項目');
+      return;
+    }
+
+    const prizeText = prizeContentInput.value.trim();
+    if (!prizeText) {
+      alert('請輸入中獎內容');
+      return;
+    }
+
+    isDrawing = true;
+    setControlsDisabled(true);
+
+    const targetIndex = Math.floor(Math.random() * items.length);
+    spinTo(items, targetIndex, () => {
+      setTimeout(() => finishDraw(items, targetIndex, prizeText), 1000);
+    });
+  }
+
+  testSoundBtn.addEventListener('click', playWinSound);
+
+  addItemBtn.addEventListener('click', addItem);
+  shuffleItemsBtn.addEventListener('click', shuffleItems);
+  newItemInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addItem();
+  });
+
+  deleteItemBtn.addEventListener('click', deleteSelectedItems);
+  clearItemBtn.addEventListener('click', clearAllItems);
+  drawBtn.addEventListener('click', drawWinner);
+
+  updateEmptyState(itemListEl, '尚無項目');
+  updateEmptyState(winnerListEl, '尚無中獎紀錄');
+</script>
+</body>
+</html>
