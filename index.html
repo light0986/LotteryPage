@@ -480,6 +480,8 @@
   let lastPrizeText = null;
   let expandedWinnerItem = null;
 
+  const RANDOM_SPIN_ITEM_THRESHOLD = 10;
+
   function updateEmptyState(listEl, message) {
     const hasItems = listEl.querySelector('.list-item') !== null;
     let hint = listEl.querySelector('.empty-hint');
@@ -755,8 +757,28 @@
       delays.push(fixedStepDelay + decelIncrement * i);
     }
 
-    let currentIndex = 0;
-    highlightSpinItem(items, currentIndex);
+    const useRandomJump = total > RANDOM_SPIN_ITEM_THRESHOLD;
+    const indexSequence = [];
+    if (useRandomJump) {
+      let prevIndex = 0;
+      for (let i = 0; i < delays.length - 1; i++) {
+        let idx;
+        do {
+          idx = Math.floor(Math.random() * total);
+        } while (idx === prevIndex);
+        indexSequence.push(idx);
+        prevIndex = idx;
+      }
+      indexSequence.push(targetIndex);
+    } else {
+      let idx = 0;
+      for (let i = 0; i < delays.length; i++) {
+        idx = (idx + 1) % total;
+        indexSequence.push(idx);
+      }
+    }
+
+    highlightSpinItem(items, 0);
 
     let step = 0;
     function tick() {
@@ -765,10 +787,10 @@
         return;
       }
       const wait = delays[step];
+      const nextIndex = indexSequence[step];
       step++;
       setTimeout(() => {
-        currentIndex = (currentIndex + 1) % total;
-        highlightSpinItem(items, currentIndex);
+        highlightSpinItem(items, nextIndex);
         tick();
       }, wait);
     }

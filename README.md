@@ -93,6 +93,7 @@
 - 中獎音效音高/節奏:`playWinSound()` 內的 `playHornNote(now, 880, 0.28)` 等呼叫,三個參數依序是「開始時間、音高(Hz)、持續秒數」。
 - 中獎音色細節(波形、濾波器、起音滑音幅度):`playHornNote()` 函式內部。
 - 跑動節奏(固定/漸緩秒數、每項間隔):`spinTo()` 內的 `fixedStepDelay` / `fixedStepCount` / `decelDuration` / `minLoops` 等常數。
+- 跑動方式切換門檻(項目數 ≤ 幾筆用循序跑燈 / 大於幾筆改用隨機亂跳):`RANDOM_SPIN_ITEM_THRESHOLD`(目前為 10)。項目數 ≤ 此值時,跑馬燈依清單順序逐項高亮(原本行為);大於此值時,每一步改成隨機跳到清單中某一項(不會連續兩步跳到同一項),節奏仍維持相同的「先等速、後漸緩」曲線,最後一步固定落在實際抽中的項目上。
 - 清單最低高度:`.list-box` 的 `min-height: 500px`。
 - 上下堆疊的斷點(目前 640px):`@media (max-width: 640px)`,以及 JS 裡對應判斷用的 `isStackedLayout()`(判斷式需跟 CSS 斷點保持一致)。
 - 自動捲動的時機/目標元素:`drawWinner()` 裡的 `focusForScroll(appTitleEl)`(捲到最上)、`finishDraw()` 裡的 `focusForScroll(authorFooterEl)`(捲到最下),詳見上方「自動捲動實作方式」。
