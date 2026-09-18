@@ -1,6 +1,6 @@
 # 抽獎系統
 
-一頁式抽獎網頁,所有 HTML / CSS / JavaScript 都寫在同一個檔案 [`LotteryPage.html`](./LotteryPage.html) 裡,不依賴任何外部檔案或函式庫,直接用瀏覽器開啟即可使用。
+一頁式抽獎網頁,所有 HTML / CSS / JavaScript 都寫在同一個檔案 [`LotteryPage.html`](./index.html) 裡,不依賴任何外部檔案或函式庫,直接用瀏覽器開啟即可使用。
 
 ## 畫面配置
 
